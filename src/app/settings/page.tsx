@@ -33,7 +33,7 @@ export default function ConfiguracoesPage() {
       try {
         if (!apiUrl) throw new Error("URL da API não configurada.");
 
-        const res = await fetch(`${apiUrl}/api/uploadProfilePic`, {
+        const res = await fetch(`${apiUrl}/uploadProfilePic`, {
           method: "POST",
           body: formData,
         });

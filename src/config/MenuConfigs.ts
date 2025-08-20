@@ -26,11 +26,7 @@ export const getMenuLinks = (favoritosCount: number = 0): NavLink[] => [
     icon: Star,
     badge: favoritosCount > 0 ? favoritosCount : undefined, // Mostra o badge apenas se houver favoritos
   },
-  {
-    href: "/login",
-    label: "Login",
-    icon: User,
-  },
+ 
   {
     href: "/settings",
     label: "Configurações",

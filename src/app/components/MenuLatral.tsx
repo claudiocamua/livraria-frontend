@@ -2,16 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { useFavoritos } from "@/app/hook/useFavoritos";
 import { getMenuLinks } from "@/config/MenuConfigs"; 
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthCotext"; 
 
 export default function MenuLateral() {
   const [aberto, setAberto] = useState(false);
   const { favoritos } = useFavoritos();
+  const { logout } = useAuth();
+  const router = useRouter();
 
-  // 2. Gerando os links dinamicamente a partir da nossa função
   const links = getMenuLinks(favoritos.length);
+
+  function handleLogout() {
+    logout();         
+    router.push("/"); // redireciona para Home (page.tsx principal)
+  }
 
   return (
     <>
@@ -31,6 +39,7 @@ export default function MenuLateral() {
           onClick={() => setAberto(false)}
         />
       )}
+
       <aside
         className={`fixed top-0 right-0 h-screen bg-gray-900 text-white flex flex-col
           w-70 p-9 z-50 transform transition-transform duration-300
@@ -69,8 +78,18 @@ export default function MenuLateral() {
               )}
             </Link>
           ))}
+
+          {/* Botão de sair */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full p-2 rounded hover:bg-red-600 mt-4"
+          >
+            <LogOut size={20} />
+            <span>Sair</span>
+          </button>
         </nav>
 
+        {/* Rodapé */}
         <div className="border-t border-gray-700 pt-4 text-sm">
           © 2025 Frontend Library <br />
           Claudio Sousa

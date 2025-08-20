@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthCotext"; 
+import MenuLateral from "@/app/components/MenuLatral"; // ajusta o caminho se precisar
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,11 +25,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex`}
       >
-        {children}
+        <AuthProvider>
+          {/* Menu fixo do lado esquerdo */}
+          <MenuLateral />
+
+          {/* Conteúdo principal com padding para não ficar embaixo do menu */}
+          <main className="ml-64 flex-1 p-4">
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );
