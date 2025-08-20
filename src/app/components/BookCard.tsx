@@ -3,16 +3,24 @@
 import { Book } from "@/app/lib/books";
 import Link from "next/link";
 import { Star } from "lucide-react";
-import { useFavoritos } from "@/app/hook/useFavoritos";
 
-export default function BookCard({ id, title, author, cover }: Book) {
-  const { favoritos, toggleFavorito } = useFavoritos();
-  const favorito = favoritos.includes(id);
+interface BookCardProps extends Book {
+  isFavorito: boolean;
+  onToggleFavorito: (book: Book) => void;
+}
 
+export default function BookCard({
+  id,
+  title,
+  author,
+  cover,
+  isFavorito,
+  onToggleFavorito,
+}: BookCardProps) {
   const handleFavorito = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleFavorito({ id, title, author, cover });
+    onToggleFavorito({ id, title, author, cover });
   };
 
   return (
@@ -20,7 +28,9 @@ export default function BookCard({ id, title, author, cover }: Book) {
       <div className="bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg p-4 rounded-lg text-center transform transition hover:scale-105 hover:shadow-2xl cursor-pointer relative">
         <button
           onClick={handleFavorito}
-          className={`absolute top-2 right-2 ${favorito ? "text-yellow-400" : "text-white"}`}
+          className={`absolute top-2 right-2 ${
+            isFavorito ? "text-yellow-400" : "text-white"
+          }`}
         >
           <Star size={20} />
         </button>
