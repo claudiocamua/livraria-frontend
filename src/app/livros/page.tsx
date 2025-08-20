@@ -20,6 +20,7 @@ export default function HomePage() {
     getFrontendBooks().then(setBooks);
   }, []);
 
+
   return (
     <div className="min-h-screen bg-blue-950 flex">
       {/* Menu lateral */}
