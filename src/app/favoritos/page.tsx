@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getFrontendBooks, Book } from "@/app/lib/books";
 import BookList from "@/app/components/BookList";
-import { useFavoritos } from "@/app/hooks/useFavoritos";
+import { useFavoritos } from "@/app/hook/useFavoritos";
 
 export default function FavoritosPage() {
   const { favoritos } = useFavoritos();
