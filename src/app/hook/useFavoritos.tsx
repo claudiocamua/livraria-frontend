@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Book } from "@/app/lib/books";
 
-const API_URL = "http://localhost:5000/api/favorites";
+const API_URL = "http://localhost:4000/api/favorites";
 
 export function useFavoritos() {
   const [favoritos, setFavoritos] = useState<string[]>([]);

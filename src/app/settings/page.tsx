@@ -1,15 +1,64 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 
 export default function ConfiguracoesPage() {
   const [notificacoes, setNotificacoes] = useState(true);
   const [tema, setTema] = useState("claro");
   const [fotoPerfil, setFotoPerfil] = useState<File | null>(null);
   const [previewFoto, setPreviewFoto] = useState<string | null>(null);
-  const [fotoUrlAtual, setFotoUrlAtual] = useState<string | null>(""); // Simula a URL da foto vinda do usuário
+  const [fotoUrlAtual, setFotoUrlAtual] = useState<string | null>("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Efeito para carregar as configurações do usuário ao montar o componente
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      setIsLoading(true);
+      setMessage("");
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        setMessage("URL da API não configurada.");
+        setIsLoading(false);
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setMessage("Usuário não autenticado. Faça o login para ver suas configurações.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${apiUrl}/api/user/settings`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Erro ao carregar configurações");
+        }
+
+        const data = await res.json();
+        setNotificacoes(data.user.notifications);
+        setTema(data.user.theme);
+        setFotoUrlAtual(data.user.profilePicUrl);
+        setMessage("Configurações carregadas!");
+      } catch (err) {
+        setMessage(`Erro ao carregar configurações: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserSettings();
+  }, []);
 
   const handleFotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -24,7 +73,7 @@ export default function ConfiguracoesPage() {
     setMessage("");
     let finalFotoUrl = fotoUrlAtual;
 
-    // 1. Se uma nova foto foi selecionada, faz o upload primeiro
+    // Se uma nova foto foi selecionada, faz o upload primeiro
     if (fotoPerfil) {
       const formData = new FormData();
       formData.append("foto", fotoPerfil);
@@ -33,7 +82,8 @@ export default function ConfiguracoesPage() {
       try {
         if (!apiUrl) throw new Error("URL da API não configurada.");
 
-        const res = await fetch(`${apiUrl}/uploadProfilePic`, {
+        // CORREÇÃO: Adicionar '/api' à URL de upload
+        const res = await fetch(`${apiUrl}/api/uploadProfilePic`, {
           method: "POST",
           body: formData,
         });
@@ -45,19 +95,18 @@ export default function ConfiguracoesPage() {
 
         const data = await res.json();
         finalFotoUrl = data.path; // URL da nova imagem
-      } catch (err: any) {
+      } catch (err) {
         setMessage(`Erro no upload: ${err.message}`);
         setIsLoading(false);
         return;
       }
     }
 
-    // 2. Envia todas as configurações para o backend
+    // Envia todas as configurações para o backend
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) throw new Error("URL da API não configurada.");
 
-      // Assumindo que o token de autenticação está no localStorage
       const token = localStorage.getItem("authToken");
       if (!token) {
         setMessage("Usuário não autenticado. Faça o login novamente.");
@@ -86,9 +135,9 @@ export default function ConfiguracoesPage() {
       }
 
       const updatedData = await res.json();
-      setFotoUrlAtual(updatedData.user.profilePicUrl); // Atualiza a URL da foto
+      setFotoUrlAtual(updatedData.user.profilePicUrl);
       setMessage("Configurações salvas com sucesso!");
-    } catch (err: any) {
+    } catch (err) {
       setMessage(`Falha ao salvar: ${err.message}`);
     } finally {
       setIsLoading(false);
@@ -96,8 +145,9 @@ export default function ConfiguracoesPage() {
   };
 
   const handleApagarConta = () => {
-    if (confirm("Tem certeza que deseja apagar sua conta? Esta ação é irreversível.")) {
-      alert("Conta apagada!");
+    // Substituir alert/confirm por um modal customizado para melhor UX
+    if (window.confirm("Tem certeza que deseja apagar sua conta? Esta ação é irreversível.")) {
+      window.alert("Conta apagada!");
       // Chamada para a API de deletar a conta
     }
   };
@@ -112,65 +162,69 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        {/* Notificações */}
-        <div className="flex items-center justify-between">
-          <span>Notificações</span>
-          <input
-            type="checkbox"
-            checked={notificacoes}
-            onChange={(e) => setNotificacoes(e.target.checked)}
-            className="w-5 h-5"
-          />
-        </div>
+      {isLoading && <p className="text-blue-500 text-center">Carregando...</p>}
 
-        {/* Tema */}
-        <div>
-          <label className="block mb-1 font-medium">Tema</label>
-          <select
-            value={tema}
-            onChange={(e) => setTema(e.target.value)}
-            className="w-full p-2 border rounded-lg"
-          >
-            <option value="claro">Claro</option>
-            <option value="escuro">Escuro</option>
-          </select>
-        </div>
-
-        {/* Foto de perfil */}
-        <div>
-          <label className="block mb-1 font-medium">Foto do Perfil</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFotoChange}
-            className="w-full p-2 border rounded-lg"
-          />
-          {(previewFoto || fotoUrlAtual) && (
-            <img
-              src={previewFoto || fotoUrlAtual || ''}
-              alt="Prévia da foto do perfil"
-              className="mt-2 w-32 h-32 object-cover rounded-full border"
+      {!isLoading && (
+        <div className="space-y-4">
+          {/* Notificações */}
+          <div className="flex items-center justify-between">
+            <span>Notificações</span>
+            <input
+              type="checkbox"
+              checked={notificacoes}
+              onChange={(e) => setNotificacoes(e.target.checked)}
+              className="w-5 h-5"
             />
-          )}
+          </div>
+
+          {/* Tema */}
+          <div>
+            <label className="block mb-1 font-medium">Tema</label>
+            <select
+              value={tema}
+              onChange={(e) => setTema(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="claro">Claro</option>
+              <option value="escuro">Escuro</option>
+            </select>
+          </div>
+
+          {/* Foto de perfil */}
+          <div>
+            <label className="block mb-1 font-medium">Foto do Perfil</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFotoChange}
+              className="w-full p-2 border rounded-lg"
+            />
+            {(previewFoto || fotoUrlAtual) && (
+              <img
+                src={previewFoto || fotoUrlAtual || ''}
+                alt="Prévia da foto do perfil"
+                className="mt-2 w-32 h-32 object-cover rounded-full border"
+              />
+            )}
+          </div>
+
+          {/* Botão salvar */}
+          <button
+            onClick={handleSalvar}
+            className="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+          >
+            Salvar Alterações
+          </button>
+
+          {/* Botão apagar conta */}
+          <button
+            onClick={handleApagarConta}
+            className="mt-2 w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700"
+          >
+            Apagar Conta
+          </button>
         </div>
-
-        {/* Botão salvar */}
-        <button
-          onClick={handleSalvar}
-          className="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-        >
-          Salvar Alterações
-        </button>
-
-        {/* Botão apagar conta */}
-        <button
-          onClick={handleApagarConta}
-          className="mt-2 w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700"
-        >
-          Apagar Conta
-        </button>
-      </div>
+      )}
     </div>
   );
 }

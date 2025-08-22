@@ -1,85 +1,57 @@
 "use client";
+import { createContext, useContext, useState, ReactNode } from "react";
+import axios from "axios";
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-interface AuthContextType {
-  user: any;
-  token: string | null;
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type AuthContextType = {
+  user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  // Carregar usuário/token do localStorage ao iniciar
-  useEffect(() => {
-    const savedToken = localStorage.getItem("token");
-    const savedUser = localStorage.getItem("user");
-    if (savedToken) setToken(savedToken);
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
 
   const login = async (email: string, password: string) => {
-    const res = await fetch("http://localhost:5000/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!res.ok) throw new Error("Falha no login");
-
-    const data = await res.json();
-
-    setToken(data.token);
-    setUser(data.user);
-
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    const res = await axios.post(`${API}/api/auth/login`, { email, password });
+    setUser(res.data.user);
+    localStorage.setItem("token", res.data.token);
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const res = await fetch("http://localhost:5000/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+    const res = await axios.post(`${API}/api/auth/register`, {
+      name, // 🔹 precisa ser 'name'
+      email,
+      password,
     });
-
-    const data = await res.json();
-    
-    
-    if (!res.ok) throw new Error("Falha no cadastro");
-
-    
-    setToken(data.token);
-    setUser(data.user);
-
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    setUser(res.data.user);
+    localStorage.setItem("token", res.data.token);
   };
 
   const logout = () => {
     setUser(null);
-    setToken(null);
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth deve ser usado dentro de AuthProvider");
-  }
-  return context;
-}
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth precisa estar dentro de AuthProvider");
+  return ctx;
+};

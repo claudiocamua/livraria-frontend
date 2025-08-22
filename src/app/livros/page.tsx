@@ -1,47 +1,55 @@
 "use client";
+import { useState, useEffect } from "react";
+import { useBooks } from "@/contexts/BooksContext";
 
-import { useEffect, useState } from "react";
-import { getFrontendBooks, Book } from "@/app/lib/books";
-import BookCard from "@/app/components/BookCard";
-import MenuLateral from "@/app/components/MenuLatral"; // importa o menu
-
-export default function HomePage() {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [loginMsg, setLoginMsg] = useState("");
-
-  const [registerMsg, setRegisterMsg] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [avatar, setAvatar] = useState<File | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState("");
+export default function LivrosPage() {
+  const { books, fetchBooks, addFavorite, favorites } = useBooks();
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
-    getFrontendBooks().then(setBooks);
+    fetchBooks(); // busca livros padrão ao carregar a página
   }, []);
 
-
   return (
-    <div className="min-h-screen bg-blue-950 flex">
-      {/* Menu lateral */}
-      
+    <div className="p-4">
+      <h1 className="text-xl font-bold mb-4">Buscar Livros</h1>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          fetchBooks(query);
+        }}
+        className="flex gap-2 mb-6"
+      >
+        <input
+          className="border rounded p-2 flex-1"
+          placeholder="Digite o nome do livro"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <button className="bg-blue-600 text-white px-4 py-2 rounded">
+          Buscar
+        </button>
+      </form>
 
-      {/* Conteúdo principal */}
-      <main className="flex-1 p-6">
-        {/* Mensagem login */}
-        {loginMsg && <p className="text-white mb-4">{loginMsg}</p>}
-
-        {/* Exibir livros */}
-        {books.length === 0 ? (
-          <p className="text-blue-200">Carregando livros...</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {books.map((book) => (
-              <BookCard key={book.id} {...book} />
-            ))}
-          </div>
-        )}
-      </main>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {books.map((book) => {
+          const isFav = favorites.some((b) => b.id === book.id);
+          return (
+            <div key={book.id} className="p-4 border rounded shadow">
+              {book.cover && <img src={book.cover} alt={book.title} className="mb-2" />}
+              <h2 className="font-bold">{book.title}</h2>
+              <p className="text-sm">{book.author}</p>
+              <button
+                className={`w-full p-2 mt-2 rounded ${isFav ? "bg-gray-500" : "bg-green-600"} text-white`}
+                onClick={() => addFavorite(book)}
+                disabled={isFav}
+              >
+                {isFav ? "Favorito" : "Favoritar"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
