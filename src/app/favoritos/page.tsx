@@ -1,45 +1,25 @@
 "use client";
-import { useEffect } from "react";
+
+import React from "react";
 import { useBooks } from "@/contexts/BooksContext";
+import BookCard from "@/app/components/BookCard";
 
 export default function FavoritesPage() {
-  const { favorites, fetchFavorites, removeFavorite } = useBooks();
-
-  useEffect(() => {
-    fetchFavorites(); // carrega favoritos ao entrar na página
-  }, []);
-
-  const openBook = (url: string) => {
-    window.open(url, "_blank");
-  };
+  const { favorites } = useBooks();
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Meus Favoritos</h1>
-      {favorites.length === 0 && <p>Você ainda não favoritou nenhum livro.</p>}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {favorites.map((book) => (
-          <div key={book.id} className="p-4 border rounded shadow">
-            {book.cover && <img src={book.cover} alt={book.title} className="mb-2" />}
-            <h2 className="font-bold">{book.title}</h2>
-            <p className="text-sm">{book.author}</p>
-            {book.infoLink && (
-              <button
-                onClick={() => openBook(book.infoLink)}
-                className="bg-blue-600 text-white px-3 py-1 mt-2 rounded w-full"
-              >
-                Abrir / Baixar PDF
-              </button>
-            )}
-            <button
-              onClick={() => removeFavorite(book.id)}
-              className="bg-red-600 text-white px-3 py-1 mt-2 rounded w-full"
-            >
-              Remover dos favoritos
-            </button>
-          </div>
-        ))}
-      </div>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">⭐ Meus Favoritos</h1>
+
+      {favorites.length === 0 ? (
+        <p className="text-gray-500">Nenhum favorito adicionado.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {favorites.map((book) => (
+            <BookCard key={book.id} book={book} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

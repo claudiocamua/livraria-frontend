@@ -1,55 +1,69 @@
 "use client";
 
-import { Book } from "@/app/lib/books";
-import Link from "next/link";
-import { Star } from "lucide-react";
+import { Book, useBooks } from "@/contexts/BooksContext";
 
-interface BookCardProps extends Book {
-  isFavorito: boolean;
-  onToggleFavorito: (book: Book) => void;
-}
+type Props = {
+  book: Book;
+};
 
-export default function BookCard({
-  id,
-  title,
-  author,
-  cover,
-  isFavorito,
-  onToggleFavorito,
-}: BookCardProps) {
-  const handleFavorito = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onToggleFavorito({ id, title, author, cover });
-  };
+export default function BookCard({ book }: Props) {
+  const { favorites, addFavorite, removeFavorite } = useBooks();
+const isFavorite = favorites.some((f) => f.id === book.id);
+
+const toggleFavorite = () => {
+  if (isFavorite) {
+    removeFavorite(book.id); // sempre book.id (googleId)
+  } else {
+    addFavorite(book);
+  }
+};
+
 
   return (
-    <Link href={`/livro/${id}`} className="relative block">
-      <div className="bg-gradient-to-br from-blue-600 to-blue-400 shadow-lg p-4 rounded-lg text-center transform transition hover:scale-105 hover:shadow-2xl cursor-pointer relative">
-        {/* Botão de Favoritar */}
+    <div className="p-4 border rounded shadow flex flex-col">
+      {book.cover && (
+        <img
+          src={book.cover}
+          alt={book.title}
+          className="mb-2 w-full h-48 object-cover rounded"
+        />
+      )}
+
+      <h2 className="font-bold text-lg">{book.title}</h2>
+      <p className="text-sm text-gray-600">{book.author}</p>
+
+      <div className="mt-3 flex flex-col gap-2">
+        {book.infoLink && (
+          <a
+            href={book.infoLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-blue-600 text-white px-3 py-1 rounded text-center hover:bg-blue-700"
+          >
+            Ler Online
+          </a>
+        )}
+
+        {book.downloadLink && (
+          <a
+            href={book.downloadLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-green-600 text-white px-3 py-1 rounded text-center hover:bg-green-700"
+          >
+            Baixar PDF
+          </a>
+        )}
+
         <button
-          onClick={handleFavorito}
-          aria-label={isFavorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-          className={`absolute top-2 right-2 transition-colors ${
-            isFavorito ? "text-yellow-400" : "text-white hover:text-yellow-200"
+          onClick={toggleFavorite}
+          className={`px-3 py-1 rounded text-center ${
+            isFavorite ? "bg-red-600 text-white hover:bg-red-700" : "bg-yellow-500 text-black hover:bg-yellow-600"
           }`}
         >
-          <Star size={20} fill={isFavorito ? "currentColor" : "none"} />
+          {isFavorite ? "Remover dos Favoritos" : "⭐ Adicionar aos Favoritos"}
         </button>
-
-        {/* Imagem do Livro */}
-        <img
-          src={cover || "https://via.placeholder.com/150x220.png?text=Sem+Capa"}
-          alt={title || "Livro sem título"}
-          className="mx-auto h-40 w-32 object-cover rounded-md border border-blue-700 bg-blue-200"
-        />
-
-        {/* Informações */}
-        <h3 className="mt-3 font-semibold text-white line-clamp-2">
-          {title || "Título desconhecido"}
-        </h3>
-        <p className="text-sm text-blue-100">{author || "Autor desconhecido"}</p>
       </div>
-    </Link>
+    </div>
   );
 }

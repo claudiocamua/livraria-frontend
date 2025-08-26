@@ -1,230 +1,140 @@
 "use client";
+import { useState, useEffect, FormEvent } from "react";
+import { useAuth } from "@/contexts/AuthCotext";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
-import { useState, ChangeEvent, useEffect } from "react";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-export default function ConfiguracoesPage() {
-  const [notificacoes, setNotificacoes] = useState(true);
-  const [tema, setTema] = useState("claro");
-  const [fotoPerfil, setFotoPerfil] = useState<File | null>(null);
-  const [previewFoto, setPreviewFoto] = useState<string | null>(null);
-  const [fotoUrlAtual, setFotoUrlAtual] = useState<string | null>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("");
+export default function SettingsPage() {
+  const { user, logout } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState(""); // opcional
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const router = useRouter();
 
-  // Efeito para carregar as configurações do usuário ao montar o componente
+  // Carregar dados do usuário
   useEffect(() => {
-    const fetchUserSettings = async () => {
-      setIsLoading(true);
-      setMessage("");
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) {
-        setMessage("URL da API não configurada.");
-        setIsLoading(false);
-        return;
-      }
-
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        setMessage("Usuário não autenticado. Faça o login para ver suas configurações.");
-        setIsLoading(false);
-        return;
-      }
+    const loadUser = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
       try {
-        const res = await fetch(`${apiUrl}/api/user/settings`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+        const { data } = await axios.get(`${API}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Erro ao carregar configurações");
-        }
-
-        const data = await res.json();
-        setNotificacoes(data.user.notifications);
-        setTema(data.user.theme);
-        setFotoUrlAtual(data.user.profilePicUrl);
-        setMessage("Configurações carregadas!");
-      } catch (err) {
-        setMessage(`Erro ao carregar configurações: ${err.message}`);
-      } finally {
-        setIsLoading(false);
+        setName(data.name);
+        setEmail(data.email);
+      } catch {
+        localStorage.removeItem("token");
+        logout();
       }
     };
+    loadUser();
+  }, [logout]);
 
-    fetchUserSettings();
-  }, []);
+  // Atualizar perfil
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMsg(null);
 
-  const handleFotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFotoPerfil(file);
-      setPreviewFoto(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSalvar = async () => {
-    setIsLoading(true);
-    setMessage("");
-    let finalFotoUrl = fotoUrlAtual;
-
-    // Se uma nova foto foi selecionada, faz o upload primeiro
-    if (fotoPerfil) {
-      const formData = new FormData();
-      formData.append("foto", fotoPerfil);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-      try {
-        if (!apiUrl) throw new Error("URL da API não configurada.");
-
-        // CORREÇÃO: Adicionar '/api' à URL de upload
-        const res = await fetch(`${apiUrl}/api/uploadProfilePic`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Erro ao enviar a foto");
-        }
-
-        const data = await res.json();
-        finalFotoUrl = data.path; // URL da nova imagem
-      } catch (err) {
-        setMessage(`Erro no upload: ${err.message}`);
-        setIsLoading(false);
-        return;
-      }
-    }
-
-    // Envia todas as configurações para o backend
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) throw new Error("URL da API não configurada.");
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Usuário não autenticado");
 
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        setMessage("Usuário não autenticado. Faça o login novamente.");
-        setIsLoading(false);
-        return;
-      }
+      const payload: any = { name, email };
+      if (password) payload.password = password;
 
-      const settingsData = {
-        theme: tema,
-        notifications: notificacoes,
-        profilePicUrl: finalFotoUrl,
-      };
-
-      const res = await fetch(`${apiUrl}/api/user/settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(settingsData),
+      await axios.put(`${API}/api/users/me`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Erro ao salvar configurações");
-      }
-
-      const updatedData = await res.json();
-      setFotoUrlAtual(updatedData.user.profilePicUrl);
-      setMessage("Configurações salvas com sucesso!");
-    } catch (err) {
-      setMessage(`Falha ao salvar: ${err.message}`);
+      setMsg("Perfil atualizado com sucesso!");
+    } catch (err: any) {
+      setMsg(err?.response?.data?.error || "Erro ao atualizar perfil");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleApagarConta = () => {
-    // Substituir alert/confirm por um modal customizado para melhor UX
-    if (window.confirm("Tem certeza que deseja apagar sua conta? Esta ação é irreversível.")) {
-      window.alert("Conta apagada!");
-      // Chamada para a API de deletar a conta
+  // Apagar conta
+  const onDelete = async () => {
+    if (!confirm("Tem certeza que deseja apagar sua conta?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Usuário não autenticado");
+
+      await axios.delete(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      logout();
+      router.push("/cadastro");
+    } catch (err: any) {
+      setMsg(err?.response?.data?.error || "Erro ao apagar conta");
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 mt-10 rounded-2xl shadow-lg">
-      <h1 className="text-2xl font-bold mb-6">Configurações</h1>
+    <div className="max-w-xl mx-auto bg-white p-4 rounded shadow">
+      <h1 className="text-2xl font-bold mb-4">Configurações</h1>
+      {msg && <p className="mb-3 text-sm text-red-600">{msg}</p>}
 
-      {message && (
-        <div className={`p-3 mb-4 rounded-lg ${message.includes('Erro') || message.includes('Falha') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-          {message}
-        </div>
-      )}
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <label className="flex flex-col">
+          <span>Nome</span>
+          <input
+            className="border p-2 rounded"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </label>
 
-      {isLoading && <p className="text-blue-500 text-center">Carregando...</p>}
+        <label className="flex flex-col">
+          <span>E-mail</span>
+          <input
+            className="border p-2 rounded"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
 
-      {!isLoading && (
-        <div className="space-y-4">
-          {/* Notificações */}
-          <div className="flex items-center justify-between">
-            <span>Notificações</span>
-            <input
-              type="checkbox"
-              checked={notificacoes}
-              onChange={(e) => setNotificacoes(e.target.checked)}
-              className="w-5 h-5"
-            />
-          </div>
+        <label className="flex flex-col">
+          <span>Nova senha (opcional)</span>
+          <input
+            className="border p-2 rounded"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
 
-          {/* Tema */}
-          <div>
-            <label className="block mb-1 font-medium">Tema</label>
-            <select
-              value={tema}
-              onChange={(e) => setTema(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="claro">Claro</option>
-              <option value="escuro">Escuro</option>
-            </select>
-          </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white rounded p-2"
+        >
+          Salvar
+        </button>
+      </form>
 
-          {/* Foto de perfil */}
-          <div>
-            <label className="block mb-1 font-medium">Foto do Perfil</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFotoChange}
-              className="w-full p-2 border rounded-lg"
-            />
-            {(previewFoto || fotoUrlAtual) && (
-              <img
-                src={previewFoto || fotoUrlAtual || ''}
-                alt="Prévia da foto do perfil"
-                className="mt-2 w-32 h-32 object-cover rounded-full border"
-              />
-            )}
-          </div>
+      <hr className="my-6" />
 
-          {/* Botão salvar */}
-          <button
-            onClick={handleSalvar}
-            className="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-          >
-            Salvar Alterações
-          </button>
-
-          {/* Botão apagar conta */}
-          <button
-            onClick={handleApagarConta}
-            className="mt-2 w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700"
-          >
-            Apagar Conta
-          </button>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={loading}
+        className="bg-red-600 text-white rounded p-2"
+      >
+        Apagar minha conta
+      </button>
     </div>
   );
 }

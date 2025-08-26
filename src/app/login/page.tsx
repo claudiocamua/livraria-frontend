@@ -1,60 +1,67 @@
 "use client";
-import { useState } from "react";
+
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthCotext";
-import { useRouter } from "next/navigation"; // 🔹
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const router = useRouter(); // 🔹
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
+
     try {
       await login(email, password);
-      router.push("/"); // 🔹 redireciona para a página inicial
+      router.push("/"); // ✅ redireciona após logar
     } catch (err: any) {
-      if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Erro ao fazer login.");
-      }
+      setError(err.message || "Erro ao fazer login");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-md w-80">
-        <h1 className="text-lg font-bold mb-4">Entrar</h1>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-6 rounded shadow-md w-full max-w-sm"
+      >
+        <h1 className="text-xl font-bold mb-4">Login</h1>
 
         {error && <p className="text-red-600 mb-2">{error}</p>}
 
         <input
-          className="w-full border p-2 mb-2 rounded"
           type="email"
-          placeholder="E-mail"
+          placeholder="Email"
+          className="border w-full p-2 mb-2 rounded"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
+
         <input
-          className="w-full border p-2 mb-2 rounded"
           type="password"
           placeholder="Senha"
+          className="border w-full p-2 mb-4 rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
+
         <button
-          className="bg-blue-600 text-white w-full p-2 rounded"
+          type="submit"
           disabled={loading}
+          className="bg-blue-600 text-white w-full py-2 rounded"
         >
-          {loading ? "Entrando..." : "Login"}
+          {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
     </div>
